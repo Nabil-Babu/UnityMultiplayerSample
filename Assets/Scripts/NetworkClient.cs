@@ -81,6 +81,12 @@ public class NetworkClient : MonoBehaviour
             case Commands.NEW_PLAYER:
                 NewPlayerMsg newPlayer = JsonUtility.FromJson<NewPlayerMsg>(recMsg);
                 SpawnNewPlayer(newPlayer);
+                Debug.Log("Spawned new Player from Server");
+                break;
+            case Commands.DROPPED_PLAYER:
+                DroppedPlayersList droppedPlayers = JsonUtility.FromJson<DroppedPlayersList>(recMsg);
+                DestroyDroppedPlayers(droppedPlayers);
+                Debug.Log("Dropped dead players from the Server");
                 break;
             default:
                 Debug.Log("Unrecognized message received!");
@@ -190,4 +196,18 @@ public class NetworkClient : MonoBehaviour
         playerLookUpTable[newPlayerMsg.player.id] = player;
         player.GetComponent<PlayerController>().clientControlled = false;
     }
+
+    // Destroy Dropped players 
+    void DestroyDroppedPlayers(DroppedPlayersList dropList)
+    {
+        foreach (var playerID in dropList.droppedPlayers)
+        {
+            if(playerLookUpTable.ContainsKey(playerID))
+            {
+                Destroy(playerLookUpTable[playerID]);
+                playerLookUpTable.Remove(playerID);
+            }
+        }
+    }
+
 }

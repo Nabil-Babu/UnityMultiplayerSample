@@ -27,6 +27,7 @@ public class NetworkServer : MonoBehaviour
         m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
 
         InvokeRepeating("SendAllClientStats", 0.1f, 0.166f);
+        InvokeRepeating("ChangeColors", 2.0f, 1.0f);
     }
 
     void SendToClient(string message, NetworkConnection c)
@@ -218,6 +219,14 @@ public class NetworkServer : MonoBehaviour
                     SendToClient(JsonUtility.ToJson(dropList), m_Connections[i]);
                 }
             }
+        }
+    }
+
+    void ChangeColors()
+    {
+        foreach (var player in clientLookUpTable)
+        {
+            player.Value.cubeColor = new Color(UnityEngine.Random.Range(0,1), UnityEngine.Random.Range(0,1), UnityEngine.Random.Range(0,1));
         }
     }
 }
