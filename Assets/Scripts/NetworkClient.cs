@@ -148,7 +148,7 @@ public class NetworkClient : MonoBehaviour
     void HeartBeat()
     {
         controlledPlayerUpdateMSG.player.cubPos = controlledPlayer.transform.position;
-        controlledPlayerUpdateMSG.player.cubeColor = controlledPlayer.GetComponent<Renderer>().material.color;
+        //controlledPlayerUpdateMSG.player.cubeColor = controlledPlayer.GetComponent<Renderer>().material.color;
         SendToServer(JsonUtility.ToJson(controlledPlayerUpdateMSG));
     }
     /**
