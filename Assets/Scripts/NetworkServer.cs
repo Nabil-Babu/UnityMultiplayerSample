@@ -168,7 +168,7 @@ public class NetworkServer : MonoBehaviour
         {
             clientLookUpTable[puMsg.player.id].id = puMsg.player.id;
             clientLookUpTable[puMsg.player.id].cubPos = puMsg.player.cubPos;
-            clientLookUpTable[puMsg.player.id].cubeColor = puMsg.player.cubeColor;
+            //clientLookUpTable[puMsg.player.id].cubeColor = puMsg.player.cubeColor;
             clientLookUpTable[puMsg.player.id].heartBeat = Time.time;
         }
     }
