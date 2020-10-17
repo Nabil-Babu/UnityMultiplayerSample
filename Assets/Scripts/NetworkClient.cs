@@ -25,6 +25,7 @@ public class NetworkClient : MonoBehaviour
     // Prefab for Player Model
     public GameObject playerPrefab;
 
+    // Updated messaged of controlled player on this client
     PlayerUpdateMsg controlledPlayerUpdateMSG = new PlayerUpdateMsg();
 
     void Start ()
@@ -46,7 +47,7 @@ public class NetworkClient : MonoBehaviour
     void OnConnect()
     {
         Debug.Log("We are now connected to the server");
-        InvokeRepeating("SendPlayerStats", 0.1f, 0.0166f);
+        InvokeRepeating("HeartBeat", 0.1f, 0.0166f);
     }
 
     void OnData(DataStreamReader stream)
@@ -73,7 +74,7 @@ public class NetworkClient : MonoBehaviour
                 Debug.Log("Server update message received!");
                 break;
             case Commands.SPAWNED_PLAYERS:
-                SpawnPlayersMsg spawnedPlayers = JsonUtility.FromJson<SpawnPlayersMsg>(recMsg);
+                SpawnedPlayersList spawnedPlayers = JsonUtility.FromJson<SpawnedPlayersList>(recMsg);
                 SpawnPlayers(spawnedPlayers);
                 Debug.Log("Spawned all Players from Server");
                 break;
@@ -133,32 +134,28 @@ public class NetworkClient : MonoBehaviour
             cmd = m_Connection.PopEvent(m_Driver, out stream);
         }
     }
+    /**
+        Client Messages Functions to Server
+    */
 
-    void SendPlayerStats()
+    // Client sends controlled player's current statistics to server
+    void HeartBeat()
     {
         controlledPlayerUpdateMSG.player.cubPos = controlledPlayer.transform.position;
         controlledPlayerUpdateMSG.player.cubeColor = controlledPlayer.GetComponent<Renderer>().material.color;
         SendToServer(JsonUtility.ToJson(controlledPlayerUpdateMSG));
     }
+    /**
+        Client Response Functions from server messages
+    */
 
-    void SpawnPlayers(SpawnPlayersMsg spawnMsg)
-    {
-        for (int i = 0; i < spawnMsg.players.Count; i++)
-        {
-            GameObject player = Instantiate(playerPrefab);
-            playerLookUpTable[spawnMsg.players[i].id] = player;
-            player.transform.position = spawnMsg.players[i].cubPos;
-            player.GetComponent<PlayerController>().clientControlled = false;
-        }
+    // Response function to setup controlled players ID     
+    void SetupClientID(HandshakeMsg hsMsg)
+    { 
+        controlledPlayerUpdateMSG.player.id = hsMsg.player.id;
+        controlledClientID = hsMsg.player.id;
     }
-
-    void SpawnNewPlayer(NewPlayerMsg newPlayerMsg)
-    {
-        GameObject player = Instantiate(playerPrefab);
-        playerLookUpTable[newPlayerMsg.player.id] = player;
-        player.GetComponent<PlayerController>().clientControlled = false;
-    }
-
+    // Updates all players in client instance
     void UpdateAllPlayers(ServerUpdateMsg serverUpdateMsg)
     {
         for (int i = 0; i < serverUpdateMsg.players.Count; i++)
@@ -175,10 +172,22 @@ public class NetworkClient : MonoBehaviour
             }           
         }
     }
-
-    void SetupClientID(HandshakeMsg hsMsg)
+    // Spawns all players from the sever
+    void SpawnPlayers(SpawnedPlayersList spawnMsg)
     {
-        controlledPlayerUpdateMSG.player.id = hsMsg.player.id;
-        controlledClientID = hsMsg.player.id;
+        for (int i = 0; i < spawnMsg.players.Count; i++)
+        {
+            GameObject player = Instantiate(playerPrefab);
+            playerLookUpTable[spawnMsg.players[i].id] = player;
+            player.transform.position = spawnMsg.players[i].cubPos;
+            player.GetComponent<PlayerController>().clientControlled = false;
+        }
+    }
+    // Spawns new player from the server
+    void SpawnNewPlayer(NewPlayerMsg newPlayerMsg)
+    {
+        GameObject player = Instantiate(playerPrefab);
+        playerLookUpTable[newPlayerMsg.player.id] = player;
+        player.GetComponent<PlayerController>().clientControlled = false;
     }
 }

@@ -13,7 +13,6 @@ public class NetworkServer : MonoBehaviour
     public ushort serverPort;
     private NativeList<NetworkConnection> m_Connections;
     private Dictionary<string, NetworkObjects.NetworkPlayer> clientLookUpTable = new Dictionary<string, NetworkObjects.NetworkPlayer>();
-    private Dictionary<string, float> heartBeats = new Dictionary<string, float>();
 
     void Start ()
     {
@@ -53,7 +52,7 @@ public class NetworkServer : MonoBehaviour
         SendToClient(JsonUtility.ToJson(m),c);
 
         // Send List of Players to new Client
-        SpawnPlayersMsg playersInServer = new SpawnPlayersMsg();
+        SpawnedPlayersList playersInServer = new SpawnedPlayersList();
         foreach (var client in clientLookUpTable)
         {
             playersInServer.players.Add(client.Value);
@@ -71,7 +70,8 @@ public class NetworkServer : MonoBehaviour
         }
 
         m_Connections.Add(c);
-        clientLookUpTable[c.InternalId.ToString()] = new NetworkObjects.NetworkPlayer();       
+        clientLookUpTable[c.InternalId.ToString()] = new NetworkObjects.NetworkPlayer();
+        clientLookUpTable[c.InternalId.ToString()].heartBeat = Time.time;       
     }
 
     void OnData(DataStreamReader stream, int i)
@@ -147,7 +147,6 @@ public class NetworkServer : MonoBehaviour
                 if (cmd == NetworkEvent.Type.Data)
                 {
                     OnData(stream, i);
-                    heartBeats[m_Connections[i].InternalId.ToString()] = Time.time;
                 }
                 else if (cmd == NetworkEvent.Type.Disconnect)
                 {
@@ -157,6 +156,9 @@ public class NetworkServer : MonoBehaviour
                 cmd = m_Driver.PopEventForConnection(m_Connections[i], out stream);
             }
         }
+
+        // Check for dead Clients
+        CheckHeartBeats();
     }
 
     void UpdateClientStats(PlayerUpdateMsg puMsg)
@@ -166,6 +168,7 @@ public class NetworkServer : MonoBehaviour
             clientLookUpTable[puMsg.player.id].id = puMsg.player.id;
             clientLookUpTable[puMsg.player.id].cubPos = puMsg.player.cubPos;
             clientLookUpTable[puMsg.player.id].cubeColor = puMsg.player.cubeColor;
+            clientLookUpTable[puMsg.player.id].heartBeat = Time.time;
         }
     }
 
@@ -180,6 +183,41 @@ public class NetworkServer : MonoBehaviour
         {
             Assert.IsTrue(m_Connections[i].IsCreated); 
             SendToClient(JsonUtility.ToJson(m), m_Connections[i]);
+        }
+    }
+
+    void CheckHeartBeats()
+    {
+        List<string> theDead = new List<string>();
+        // Check all clients Heartbeat
+        foreach (var heart in clientLookUpTable)
+        {
+            if(Time.time - heart.Value.heartBeat >= 5.0f)
+            {
+                theDead.Add(heart.Key);
+            }
+        }
+        // Check if dead exists
+        if(theDead.Count > 0)
+        {
+            // Clear Look Up Table of Dead clients
+            for (int i = 0; i < theDead.Count; i++)
+            {
+                clientLookUpTable.Remove(theDead[i]);
+            }
+
+            DroppedPlayersList dropList = new DroppedPlayersList();
+            dropList.droppedPlayers = theDead;
+
+            // Send drop list to all clients except dropped ones
+            for (int i = 0; i < m_Connections.Length; i++)
+            {   
+                if(!theDead.Contains(m_Connections[i].InternalId.ToString()))
+                {
+                    Assert.IsTrue(m_Connections.IsCreated);
+                    SendToClient(JsonUtility.ToJson(dropList), m_Connections[i]);
+                }
+            }
         }
     }
 }

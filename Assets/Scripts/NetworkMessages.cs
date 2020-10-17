@@ -12,7 +12,7 @@ namespace NetworkMessages
         PLAYER_INPUT,
         SPAWNED_PLAYERS,
         NEW_PLAYER,
-        DISCONNECTED_PLAYER
+        DROPPED_PLAYER
     }
 
     [System.Serializable]
@@ -64,10 +64,10 @@ namespace NetworkMessages
     }
 
     [System.Serializable]
-    public class SpawnPlayersMsg : NetworkHeader
+    public class SpawnedPlayersList : NetworkHeader
     {
         public List<NetworkObjects.NetworkPlayer> players;
-        public SpawnPlayersMsg()
+        public SpawnedPlayersList()
         {
             cmd = Commands.SPAWNED_PLAYERS;
             players = new List<NetworkObjects.NetworkPlayer>();
@@ -84,6 +84,17 @@ namespace NetworkMessages
             player = new NetworkObjects.NetworkPlayer();
         }
     };
+
+    [System.Serializable]
+    public class DroppedPlayersList : NetworkHeader
+    {
+        public List<string> droppedPlayers;
+        public DroppedPlayersList()
+        {
+            cmd = Commands.DROPPED_PLAYER;
+            droppedPlayers = new List<string>();
+        }
+    }
 } 
 
 namespace NetworkObjects
@@ -98,6 +109,7 @@ namespace NetworkObjects
     {
         public Color cubeColor;
         public Vector3 cubPos;
+        public float heartBeat;
         public NetworkPlayer()
         {
             cubeColor = new Color();
