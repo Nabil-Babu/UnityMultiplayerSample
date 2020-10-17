@@ -43,7 +43,7 @@ public class NetworkServer : MonoBehaviour
     void OnConnect(NetworkConnection c)
     {
         Debug.Log("Accepted a connection");
-        // Example to send a handshake message:
+        // Send a handshake message to Set ID
         HandshakeMsg m = new HandshakeMsg();
         m.player.id = c.InternalId.ToString();
         Assert.IsTrue(c.IsCreated); 
