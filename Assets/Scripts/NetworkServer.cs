@@ -226,7 +226,7 @@ public class NetworkServer : MonoBehaviour
     {
         foreach (var player in clientLookUpTable)
         {
-            player.Value.cubeColor = new Color(UnityEngine.Random.Range(0,1), UnityEngine.Random.Range(0,1), UnityEngine.Random.Range(0,1));
+            player.Value.cubeColor = new Color(UnityEngine.Random.Range(0.0f,1.0f), UnityEngine.Random.Range(0.0f,1.0f), UnityEngine.Random.Range(0.0f,1.0f));
         }
     }
 }
