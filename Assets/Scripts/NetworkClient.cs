@@ -13,6 +13,13 @@ public class NetworkClient : MonoBehaviour
     public string serverIP;
     public ushort serverPort;
 
+    public string controlledClientID;
+
+    public GameObject controlledPlayer; 
+    public GameObject playerPrefab;
+
+    PlayerUpdateMsg controlledPlayerUpdateMSG = new PlayerUpdateMsg();
+
     
     void Start ()
     {
@@ -22,32 +29,34 @@ public class NetworkClient : MonoBehaviour
         m_Connection = m_Driver.Connect(endpoint);
     }
     
-    void SendToServer(string message){
+    void SendToServer(string message)
+    {
         var writer = m_Driver.BeginSend(m_Connection);
         NativeArray<byte> bytes = new NativeArray<byte>(Encoding.ASCII.GetBytes(message),Allocator.Temp);
         writer.WriteBytes(bytes);
         m_Driver.EndSend(writer);
     }
 
-    void OnConnect(){
+    void OnConnect()
+    {
         Debug.Log("We are now connected to the server");
-
-        //// Example to send a handshake message:
-        // HandshakeMsg m = new HandshakeMsg();
-        // m.player.id = m_Connection.InternalId.ToString();
-        // SendToServer(JsonUtility.ToJson(m));
+        InvokeRepeating("SendPlayerStats", 0.1f, 0.0166f);
     }
 
-    void OnData(DataStreamReader stream){
+    void OnData(DataStreamReader stream)
+    {
         NativeArray<byte> bytes = new NativeArray<byte>(stream.Length,Allocator.Temp);
         stream.ReadBytes(bytes);
         string recMsg = Encoding.ASCII.GetString(bytes.ToArray());
         NetworkHeader header = JsonUtility.FromJson<NetworkHeader>(recMsg);
 
-        switch(header.cmd){
+        switch(header.cmd)
+        {
             case Commands.HANDSHAKE:
             HandshakeMsg hsMsg = JsonUtility.FromJson<HandshakeMsg>(recMsg);
             Debug.Log("Handshake message received!");
+            controlledPlayerUpdateMSG.player.id = hsMsg.player.id;
+            controlledClientID = hsMsg.player.id;
             break;
             case Commands.PLAYER_UPDATE:
             PlayerUpdateMsg puMsg = JsonUtility.FromJson<PlayerUpdateMsg>(recMsg);
@@ -63,12 +72,14 @@ public class NetworkClient : MonoBehaviour
         }
     }
 
-    void Disconnect(){
+    void Disconnect()
+    {
         m_Connection.Disconnect(m_Driver);
         m_Connection = default(NetworkConnection);
     }
 
-    void OnDisconnect(){
+    void OnDisconnect()
+    {
         Debug.Log("Client got disconnected from server");
         m_Connection = default(NetworkConnection);
     }
@@ -106,5 +117,17 @@ public class NetworkClient : MonoBehaviour
 
             cmd = m_Connection.PopEvent(m_Driver, out stream);
         }
+    }
+
+    void SendPlayerStats()
+    {
+        controlledPlayerUpdateMSG.player.cubPos = controlledPlayer.transform.position;
+        controlledPlayerUpdateMSG.player.cubeColor = controlledPlayer.GetComponent<Renderer>().material.color;
+        SendToServer(JsonUtility.ToJson(controlledPlayerUpdateMSG));
+    }
+
+    void UpdateLookUpTable(ServerUpdateMsg serverUpdateMsg)
+    {
+        
     }
 }
