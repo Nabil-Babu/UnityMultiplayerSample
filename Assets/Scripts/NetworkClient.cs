@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using Unity.Collections;
+using System.Collections.Generic;
 using Unity.Networking.Transport;
 using NetworkMessages;
 using NetworkObjects;
@@ -13,14 +14,19 @@ public class NetworkClient : MonoBehaviour
     public string serverIP;
     public ushort serverPort;
 
+    // ID Set by the server for this Client
     public string controlledClientID;
 
+    private Dictionary<string, GameObject> playerLookUpTable = new Dictionary<string, GameObject>();
+
+    // Player controlled by THIS Client
     public GameObject controlledPlayer; 
+    
+    // Prefab for Player Model
     public GameObject playerPrefab;
 
     PlayerUpdateMsg controlledPlayerUpdateMSG = new PlayerUpdateMsg();
 
-    
     void Start ()
     {
         m_Driver = NetworkDriver.Create();
@@ -53,22 +59,31 @@ public class NetworkClient : MonoBehaviour
         switch(header.cmd)
         {
             case Commands.HANDSHAKE:
-            HandshakeMsg hsMsg = JsonUtility.FromJson<HandshakeMsg>(recMsg);
-            Debug.Log("Handshake message received!");
-            controlledPlayerUpdateMSG.player.id = hsMsg.player.id;
-            controlledClientID = hsMsg.player.id;
-            break;
+                HandshakeMsg hsMsg = JsonUtility.FromJson<HandshakeMsg>(recMsg);
+                Debug.Log("Handshake message received Set clients ID");
+                SetupClientID(hsMsg);
+                break;
             case Commands.PLAYER_UPDATE:
-            PlayerUpdateMsg puMsg = JsonUtility.FromJson<PlayerUpdateMsg>(recMsg);
-            Debug.Log("Player update message received!");
-            break;
+                PlayerUpdateMsg puMsg = JsonUtility.FromJson<PlayerUpdateMsg>(recMsg);
+                Debug.Log("Player update message received!");
+                break;
             case Commands.SERVER_UPDATE:
-            ServerUpdateMsg suMsg = JsonUtility.FromJson<ServerUpdateMsg>(recMsg);
-            Debug.Log("Server update message received!");
-            break;
+                ServerUpdateMsg suMsg = JsonUtility.FromJson<ServerUpdateMsg>(recMsg);
+                UpdateAllPlayers(suMsg);
+                Debug.Log("Server update message received!");
+                break;
+            case Commands.SPAWNED_PLAYERS:
+                SpawnPlayersMsg spawnedPlayers = JsonUtility.FromJson<SpawnPlayersMsg>(recMsg);
+                SpawnPlayers(spawnedPlayers);
+                Debug.Log("Spawned all Players from Server");
+                break;
+            case Commands.NEW_PLAYER:
+                NewPlayerMsg newPlayer = JsonUtility.FromJson<NewPlayerMsg>(recMsg);
+                SpawnNewPlayer(newPlayer);
+                break;
             default:
-            Debug.Log("Unrecognized message received!");
-            break;
+                Debug.Log("Unrecognized message received!");
+                break;
         }
     }
 
@@ -126,8 +141,44 @@ public class NetworkClient : MonoBehaviour
         SendToServer(JsonUtility.ToJson(controlledPlayerUpdateMSG));
     }
 
-    void UpdateLookUpTable(ServerUpdateMsg serverUpdateMsg)
+    void SpawnPlayers(SpawnPlayersMsg spawnMsg)
     {
-        
+        for (int i = 0; i < spawnMsg.players.Count; i++)
+        {
+            GameObject player = Instantiate(playerPrefab);
+            playerLookUpTable[spawnMsg.players[i].id] = player;
+            player.transform.position = spawnMsg.players[i].cubPos;
+            player.GetComponent<PlayerController>().clientControlled = false;
+        }
+    }
+
+    void SpawnNewPlayer(NewPlayerMsg newPlayerMsg)
+    {
+        GameObject player = Instantiate(playerPrefab);
+        playerLookUpTable[newPlayerMsg.player.id] = player;
+        player.GetComponent<PlayerController>().clientControlled = false;
+    }
+
+    void UpdateAllPlayers(ServerUpdateMsg serverUpdateMsg)
+    {
+        for (int i = 0; i < serverUpdateMsg.players.Count; i++)
+        {
+            if(playerLookUpTable.ContainsKey(serverUpdateMsg.players[i].id))
+            {
+                playerLookUpTable[serverUpdateMsg.players[i].id].transform.position = serverUpdateMsg.players[i].cubPos;
+                playerLookUpTable[serverUpdateMsg.players[i].id].GetComponent<Renderer>().material.color = serverUpdateMsg.players[i].cubeColor;
+            } 
+            else if (controlledPlayerUpdateMSG.player.id == serverUpdateMsg.players[i].id)
+            {
+                controlledPlayer.gameObject.GetComponent<Renderer>().material.color = serverUpdateMsg.players[i].cubeColor;
+                controlledPlayerUpdateMSG.player.cubeColor = serverUpdateMsg.players[i].cubeColor;
+            }           
+        }
+    }
+
+    void SetupClientID(HandshakeMsg hsMsg)
+    {
+        controlledPlayerUpdateMSG.player.id = hsMsg.player.id;
+        controlledClientID = hsMsg.player.id;
     }
 }

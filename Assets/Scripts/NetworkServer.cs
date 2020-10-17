@@ -13,6 +13,7 @@ public class NetworkServer : MonoBehaviour
     public ushort serverPort;
     private NativeList<NetworkConnection> m_Connections;
     private Dictionary<string, NetworkObjects.NetworkPlayer> clientLookUpTable = new Dictionary<string, NetworkObjects.NetworkPlayer>();
+    private Dictionary<string, float> heartBeats = new Dictionary<string, float>();
 
     void Start ()
     {
@@ -25,6 +26,8 @@ public class NetworkServer : MonoBehaviour
             m_Driver.Listen();
 
         m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
+
+        InvokeRepeating("SendAllClientStats", 0.1f, 0.166f);
     }
 
     void SendToClient(string message, NetworkConnection c)
@@ -48,6 +51,24 @@ public class NetworkServer : MonoBehaviour
         m.player.id = c.InternalId.ToString();
         Assert.IsTrue(c.IsCreated); 
         SendToClient(JsonUtility.ToJson(m),c);
+
+        // Send List of Players to new Client
+        SpawnPlayersMsg playersInServer = new SpawnPlayersMsg();
+        foreach (var client in clientLookUpTable)
+        {
+            playersInServer.players.Add(client.Value);
+        }
+        Assert.IsTrue(c.IsCreated);
+        SendToClient(JsonUtility.ToJson(playersInServer),c);
+
+        // Send new Client to All existing Players
+        NewPlayerMsg newPlayer = new NewPlayerMsg();
+        newPlayer.player.id = c.InternalId.ToString();
+        for (int i = 0; i < m_Connections.Length; i++)
+        {
+            Assert.IsTrue(m_Connections[i].IsCreated);
+            SendToClient(JsonUtility.ToJson(newPlayer), m_Connections[i]);
+        }
 
         m_Connections.Add(c);
         clientLookUpTable[c.InternalId.ToString()] = new NetworkObjects.NetworkPlayer();       
@@ -126,6 +147,7 @@ public class NetworkServer : MonoBehaviour
                 if (cmd == NetworkEvent.Type.Data)
                 {
                     OnData(stream, i);
+                    heartBeats[m_Connections[i].InternalId.ToString()] = Time.time;
                 }
                 else if (cmd == NetworkEvent.Type.Disconnect)
                 {
@@ -144,6 +166,20 @@ public class NetworkServer : MonoBehaviour
             clientLookUpTable[puMsg.player.id].id = puMsg.player.id;
             clientLookUpTable[puMsg.player.id].cubPos = puMsg.player.cubPos;
             clientLookUpTable[puMsg.player.id].cubeColor = puMsg.player.cubeColor;
+        }
+    }
+
+    void SendAllClientStats()
+    {
+        ServerUpdateMsg m = new ServerUpdateMsg();
+        foreach (var client in clientLookUpTable)
+        {
+            m.players.Add(client.Value);
+        }
+        for (int i = 0; i < m_Connections.Length; i++)
+        {
+            Assert.IsTrue(m_Connections[i].IsCreated); 
+            SendToClient(JsonUtility.ToJson(m), m_Connections[i]);
         }
     }
 }

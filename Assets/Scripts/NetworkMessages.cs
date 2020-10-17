@@ -12,7 +12,7 @@ namespace NetworkMessages
         PLAYER_INPUT,
         SPAWNED_PLAYERS,
         NEW_PLAYER,
-        PLAYER_GETID,
+        DISCONNECTED_PLAYER
     }
 
     [System.Serializable]
@@ -62,6 +62,28 @@ namespace NetworkMessages
             players = new List<NetworkObjects.NetworkPlayer>();
         }
     }
+
+    [System.Serializable]
+    public class SpawnPlayersMsg : NetworkHeader
+    {
+        public List<NetworkObjects.NetworkPlayer> players;
+        public SpawnPlayersMsg()
+        {
+            cmd = Commands.SPAWNED_PLAYERS;
+            players = new List<NetworkObjects.NetworkPlayer>();
+        }
+    }
+
+    [System.Serializable]
+    public class NewPlayerMsg : NetworkHeader 
+    { 
+        public NetworkObjects.NetworkPlayer player;
+        public NewPlayerMsg() // Constructor
+        {      
+            cmd = Commands.NEW_PLAYER;
+            player = new NetworkObjects.NetworkPlayer();
+        }
+    };
 } 
 
 namespace NetworkObjects
