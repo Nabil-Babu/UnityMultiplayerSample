@@ -26,7 +26,7 @@ public class NetworkServer : MonoBehaviour
 
         m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
 
-        InvokeRepeating("SendAllClientStats", 0.1f, 0.166f);
+        InvokeRepeating("SendAllClientStats", 0.1f, 0.008f);
         InvokeRepeating("ChangeColors", 2.0f, 1.0f);
     }
 

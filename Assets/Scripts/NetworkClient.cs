@@ -47,7 +47,7 @@ public class NetworkClient : MonoBehaviour
     void OnConnect()
     {
         Debug.Log("We are now connected to the server");
-        InvokeRepeating("HeartBeat", 0.1f, 0.0166f);
+        InvokeRepeating("HeartBeat", 0.1f, 0.008f);
     }
 
     void OnData(DataStreamReader stream)
