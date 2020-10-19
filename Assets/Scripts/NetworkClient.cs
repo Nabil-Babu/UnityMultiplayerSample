@@ -62,7 +62,7 @@ public class NetworkClient : MonoBehaviour
             case Commands.HANDSHAKE:
                 HandshakeMsg hsMsg = JsonUtility.FromJson<HandshakeMsg>(recMsg);
                 Debug.Log("Handshake message received Set clients ID");
-                SetupClientID(hsMsg);
+                SetupClient(hsMsg);
                 break;
             case Commands.PLAYER_UPDATE:
                 PlayerUpdateMsg puMsg = JsonUtility.FromJson<PlayerUpdateMsg>(recMsg);
@@ -156,8 +156,11 @@ public class NetworkClient : MonoBehaviour
     */
 
     // Response function to setup controlled players ID     
-    void SetupClientID(HandshakeMsg hsMsg)
+    void SetupClient(HandshakeMsg hsMsg)
     { 
+        controlledPlayer = Instantiate(playerPrefab);
+        controlledPlayer.GetComponent<PlayerController>().clientControlled = true;
+        controlledPlayer.GetComponent<PlayerController>().networkClient = this;
         controlledPlayerUpdateMSG.player.id = hsMsg.player.id;
         controlledClientID = hsMsg.player.id;
     }
@@ -187,6 +190,7 @@ public class NetworkClient : MonoBehaviour
             playerLookUpTable[spawnMsg.players[i].id] = player;
             player.transform.position = spawnMsg.players[i].cubPos;
             player.GetComponent<PlayerController>().clientControlled = false;
+            player.GetComponent<PlayerController>().networkClient = this;
         }
     }
     // Spawns new player from the server
@@ -195,6 +199,7 @@ public class NetworkClient : MonoBehaviour
         GameObject player = Instantiate(playerPrefab);
         playerLookUpTable[newPlayerMsg.player.id] = player;
         player.GetComponent<PlayerController>().clientControlled = false;
+        player.GetComponent<PlayerController>().networkClient = this;
     }
 
     // Destroy Dropped players 

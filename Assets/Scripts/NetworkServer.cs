@@ -14,6 +14,7 @@ public class NetworkServer : MonoBehaviour
     private NativeList<NetworkConnection> m_Connections;
     private Dictionary<string, NetworkObjects.NetworkPlayer> clientLookUpTable = new Dictionary<string, NetworkObjects.NetworkPlayer>();
 
+    private int pktID = 0;
     void Start ()
     {
         m_Driver = NetworkDriver.Create();
@@ -86,11 +87,11 @@ public class NetworkServer : MonoBehaviour
         {
             case Commands.HANDSHAKE:
             HandshakeMsg hsMsg = JsonUtility.FromJson<HandshakeMsg>(recMsg);
-            Debug.Log("Handshake message received!");
+            Debug.Log("PacketID: "+pktID+" Handshake from: "+hsMsg.player.id);
             break;
             case Commands.PLAYER_UPDATE:
             PlayerUpdateMsg puMsg = JsonUtility.FromJson<PlayerUpdateMsg>(recMsg);
-            Debug.Log("Player update message received!");
+            Debug.Log("PacketID: "+pktID+" PlayerUpdate from: "+puMsg.player.id);
             UpdateClientStats(puMsg);
             break;
             case Commands.SERVER_UPDATE:
@@ -101,6 +102,7 @@ public class NetworkServer : MonoBehaviour
             Debug.Log("SERVER ERROR: Unrecognized message received!");
             break;
         }
+        pktID++;
     }
 
     void OnDisconnect(int i)
@@ -168,7 +170,6 @@ public class NetworkServer : MonoBehaviour
         {
             clientLookUpTable[puMsg.player.id].id = puMsg.player.id;
             clientLookUpTable[puMsg.player.id].cubPos = puMsg.player.cubPos;
-            //clientLookUpTable[puMsg.player.id].cubeColor = puMsg.player.cubeColor;
             clientLookUpTable[puMsg.player.id].heartBeat = Time.time;
         }
     }
@@ -193,7 +194,7 @@ public class NetworkServer : MonoBehaviour
         // Check all clients Heartbeat
         foreach (var heart in clientLookUpTable)
         {
-            if(Time.time - heart.Value.heartBeat >= 5.0f)
+            if(Time.time - heart.Value.heartBeat >= 1.0f)
             {
                 theDead.Add(heart.Key);
             }

@@ -5,7 +5,7 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
     public float speed;
-
+    public NetworkClient networkClient;
     public bool clientControlled;
 
     // Update is called once per frame
